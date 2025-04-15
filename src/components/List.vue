@@ -20,6 +20,10 @@ const proxyState = new Proxy(rawState, {
   }
 })
 
+/**
+ * ARRAY TOPIC
+ */
+
 function awesomeArray(arr) {
   return new Proxy(arr, {
     get(target, key, receiver) {
@@ -41,6 +45,53 @@ const fruits = awesomeArray(['orange', 'apple', 'banana', 'peach', 'watermelon']
 
 // TODO: Make it possible to set objects like this
 // fruits['1:2'] = ['lemon', 'peach']
+
+
+/**
+ * String builder topic
+ */
+
+ function commandBuilder(path = []) {
+  return new Proxy(() => {}, {
+    get(_, prop) {
+      if (prop === 'run') {
+        return () => {
+          return path.map(part => {
+            if (typeof part === 'function') {
+              return part(); // resolve dynamic parts
+            }
+            return part;
+          }).join(' ');
+        };
+      }
+
+      return commandBuilder([...path, prop]);
+    },
+    apply(_, __, args) {
+      const last = path.at(-1);
+      // Convert .message("Hello") to: message -m "Hello"
+      if (typeof last === 'string') {
+        const flag = `-${last[0]}`; // simplistic: 'message' → '-m'
+        const quoted = args.map(arg => `"${arg}"`).join(' ');
+        const formatter = () => `${flag} ${quoted}`;
+        return commandBuilder([...path.slice(0, -1), formatter]);
+      }
+
+      // fallback (shouldn't usually happen)
+      return commandBuilder(path);
+    }
+  });
+}
+
+const cli = commandBuilder();
+
+
+// TODO: Build custom string builder using proxies
+// function classNameBuilder(parts = []) {
+//
+// }
+
+// const $c = classNameBuilder();
 </script>
 
 <template>
@@ -122,7 +173,55 @@ const fruits = awesomeArray(['orange', 'apple', 'banana', 'peach', 'watermelon']
       <p><code>fruits[1]</code> {{ fruits[1] }}</p>
       <p><code>fruits['0:3']</code> {{ fruits['0:3'] }}</p>
     </pre>
+  </ListItem>
+  <ListItem>
+    <template #icon>
+      <DocumentationIcon />
+    </template>
+    <template #heading> And it's not limited to that! </template>
+    Below you can see how using 'apply' method in proxies we can build strings while not using hardcoded strings.
+    <pre>
+      <code class="custom-code">
+        function commandBuilder(path = []) {
+          return new Proxy(() => {}, {
+            get(_, prop) {
+              if (prop === 'run') {
+                return () => {
+                  return path.map(part => {
+                    if (typeof part === 'function') {
+                      return part(); // resolve dynamic parts
+                    }
+                    return part;
+                  }).join(' ');
+                };
+              }
 
+              return commandBuilder([...path, prop]);
+            },
+            apply(_, __, args) {
+              const last = path.at(-1);
+              // Convert .message("Hello") to: message -m "Hello"
+              if (typeof last === 'string') {
+                const flag = `-${last[0]}`; // simplistic: 'message' → '-m'
+                const quoted = args.map(arg => `"${arg}"`).join(' ');
+                const formatter = () => `${flag} ${quoted}`;
+                return commandBuilder([...path.slice(0, -1), formatter]);
+              }
+
+              // fallback (shouldn't usually happen)
+              return commandBuilder(path);
+            }
+          });
+        }
+
+        const cli = commandBuilder();
+      </code>
+    </pre>
+    <code>cli.git.commit.message("Initial commit").run()</code> {{ cli.git.commit.message("Initial commit").run() }}
+    <br>
+    Now, can you make something simple?<br>
+    Can you write a Proxy that will build a string in the same way, but just simply add '-' between every word?
+    <code>$c.cool.class.name()</code> should resolve to <code>cool-class-name</code> for example
   </ListItem>
 </template>
 
