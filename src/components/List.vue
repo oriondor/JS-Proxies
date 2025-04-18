@@ -92,6 +92,94 @@ const cli = commandBuilder();
 // }
 
 // const $c = classNameBuilder();
+
+
+/**
+ * 🤡 Example
+ */
+
+function secretFunction(x) {
+  return `You passed ${x}`;
+}
+
+let callCount = 0;
+
+const trollProxy = new Proxy(secretFunction, {
+  apply(target, thisArg, args) {
+    callCount++;
+    console.log(`\nCalling function ${callCount} time`);
+    if (callCount % 3 === 0) {
+      console.log('The function is tired. It returns nonsense.');
+      return '🤪 No idea what you asked!\n';
+    }
+    return target.apply(thisArg, args);
+  },
+
+  get(target, prop) {
+    if (prop === 'selfDestruct') {
+      console.log('\nGoodbye cruel world!');
+      delete trollProxy.apply;
+      return '💥 Boom. Gone.\n';
+    }
+    return Reflect.get(target, prop);
+  },
+
+  has(target, prop) {
+    const result = Math.random() < 0.5;
+    console.log(`\nDoes "${prop}" exist? ${result}`);
+    return result;
+  },
+
+  deleteProperty(target, prop) {
+    const blocked = Math.random() < 0.3;
+    if (blocked) {
+      console.log(`\nAccess denied: can't delete "${prop}"`);
+      return true;
+    }
+    console.log(`\nDeleted "${prop}"\n`);
+    return Reflect.deleteProperty(target, prop);
+  }
+});
+
+console.log(trollProxy('Hello'));
+console.log(trollProxy('Salut'));
+console.log(trollProxy('Privet'));
+
+console.log('apply' in trollProxy);
+
+console.log(trollProxy.selfDestruct);
+
+delete trollProxy.name;
+
+
+// TODO: Implement proxy that will have secured fields that you cannot delete from the object
+// Also forbid to see salary if role is not accountant
+console.log('\n--------------------\n')
+const securedFields = ['name', 'email'];
+
+const sampleObject = {
+  id: 123,
+  name: 'John Doe',
+  email: 'johndoe@altura.io',
+  salary: 100000,
+  age: 32,
+}
+
+// proxy should look like
+const userProxy = new Proxy(sampleObject, {
+  // Prevent deletion of secured fields
+  deleteProperty(target, prop) {
+    return Reflect.deleteProperty(target, prop);
+  },
+  // Protect salary unless role is accountant
+  get(target, prop, receiver) {
+    return Reflect.get(target, prop, receiver);
+  }
+})
+
+// userProxy.all('accountant') // should return whole object if role is accountant or everything except salary if any other role
+// delete userProxy.name // should fail 
+// delete UserProxy.age // should not fail 
 </script>
 
 <template>
@@ -222,6 +310,101 @@ const cli = commandBuilder();
     Now, can you make something simple?<br>
     Can you write a Proxy that will build a string in the same way, but just simply add '-' between every word?
     <code>$c.cool.class.name()</code> should resolve to <code>cool-class-name</code> for example
+  </ListItem>
+  <ListItem>
+    <template #icon>
+      <DocumentationIcon />
+    </template>
+    <template #heading> Let's talk about magic now </template>
+    <p>Have you ever experienced any weird behaviour while working with JavaScript? If so, then maybe it was not magic, it could've been a troll proxy! <i>(just joking)</i></p>
+    <pre>
+      <code class="custom-code">
+        function secretFunction(x) {
+          return `You passed ${x}`;
+        }
+
+        let callCount = 0;
+
+        const trollProxy = new Proxy(secretFunction, {
+          apply(target, thisArg, args) {
+            callCount++;
+            console.log(`Calling function ${callCount} time`);
+            if (callCount % 3 === 0) {
+              console.log('The function is tired. It returns nonsense.');
+              return '🤪 No idea what you asked!';
+            }
+            return target.apply(thisArg, args);
+          },
+
+          get(target, prop) {
+            if (prop === 'selfDestruct') {
+              console.log('Goodbye cruel world!');
+              delete trollProxy.apply;
+              return () => '💥 Boom. Gone.';
+            }
+            return Reflect.get(target, prop);
+          },
+
+          has(target, prop) {
+            const result = Math.random() < 0.5;
+            console.log(`Does "${prop}" exist? ${result}`);
+            return result;
+          },
+
+          deleteProperty(target, prop) {
+            const blocked = Math.random() < 0.3;
+            if (blocked) {
+              console.log(`Access denied: can't delete "${prop}"`);
+              return false;
+            }
+            console.log(`Deleted "${prop}"`);
+            return Reflect.deleteProperty(target, prop);
+          }
+        });
+
+
+        console.log(trollProxy('Hello'));
+        console.log(trollProxy('Salut'));
+        console.log(trollProxy('Privet'));
+
+        console.log('apply' in trollProxy);
+
+        console.log(trollProxy.selfDestruct);
+
+        delete trollProxy.name;
+      </code>
+    </pre>
+    <p>
+      Now please implement a proxy where user is already defined and you need to overwrite validations for get and delete on this user props
+    </p>
+    <pre>
+      <code class="custom-code">
+        const securedFields = ['name', 'email'];
+        const sampleObject = {
+          id: 123,
+          name: 'John Doe',
+          email: 'johndoe@altura.io',
+          salary: 100000,
+          age: 32,
+        }
+
+        // proxy should look like
+        const userProxy = new Proxy(sampleObject, {
+          // Prevent deletion of secured fields
+          deleteProperty(target, prop) {
+            return Reflect.deleteProperty(target, prop);
+          },
+          // Protect salary unless role is accountant
+          get(target, prop, receiver) {
+            return Reflect.get(target, prop, receiver);
+          }
+        })
+
+        // userProxy.all('accountant') // should return whole object if role is accountant or everything except salary if any other role
+        // delete userProxy.name // should fail 
+        // delete UserProxy.age // should not fail 
+      </code>
+    </pre>
   </ListItem>
 </template>
 
